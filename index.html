@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketch to App — sketch in, website out</title>
+<meta name="description" content="Draw a wireframe or photograph one on paper, and get a working webpage you can edit and export.">
+<link rel="stylesheet" href="fonts/sora.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">Sketch to App</span></div>
+  <input id="projectName" class="project-name" type="text" value="Untitled page" aria-label="Project name" maxlength="80">
+  <span id="dirtyDot" class="dirty-dot" hidden title="Unsaved changes">●</span>
+  <div class="top-actions">
+    <button id="btnSave" class="btn btn-ghost" type="button">Save</button>
+    <button id="btnProjects" class="btn btn-ghost" type="button">Projects</button>
+    <button id="btnSettings" class="btn btn-ghost" type="button">Settings</button>
+    <button id="btnExport" class="btn btn-primary" type="button">Export</button>
+  </div>
+</header>
+
+<main class="workspace">
+  <!-- Left: sketch -->
+  <section class="panel sketch-panel" aria-label="Sketch">
+    <div class="panel-head">
+      <h2>1 · Sketch it</h2>
+      <span class="panel-hint">Draw, drop a photo, or load an example.</span>
+    </div>
+
+    <div class="canvas-wrap" id="dropZone">
+      <canvas id="sketchCanvas" width="640" height="440" aria-label="Sketch canvas — draw your wireframe here"></canvas>
+      <p class="drop-hint">Drop a photo of a sketch here, or paste one (Ctrl+V).</p>
+    </div>
+
+    <div class="tool-row" role="toolbar" aria-label="Drawing tools">
+      <button id="toolPen" class="tool active" type="button" aria-pressed="true">Pen</button>
+      <button id="toolEraser" class="tool" type="button" aria-pressed="false">Eraser</button>
+      <label class="tool-label">Width
+        <select id="penWidth">
+          <option value="2">Fine</option>
+          <option value="4" selected>Medium</option>
+          <option value="7">Thick</option>
+        </select>
+      </label>
+      <button id="btnUndo" class="tool" type="button">Undo</button>
+      <button id="btnClear" class="tool" type="button">Clear</button>
+      <label class="tool-check"><input id="chkGrid" type="checkbox" checked> Grid</label>
+    </div>
+
+    <div class="tool-row">
+      <label class="btn btn-ghost file-btn">Upload a photo
+        <input id="filePhoto" type="file" accept="image/*" hidden>
+      </label>
+      <button id="btnDownloadSketch" class="btn btn-ghost" type="button">Download sketch PNG</button>
+    </div>
+
+    <button id="btnGenerate" class="btn btn-primary btn-generate" type="button">Generate page from sketch</button>
+    <p id="genStatus" class="status" role="status">No key yet? Load an example below — it works without one.</p>
+    <p id="keyNotice" class="notice" hidden>Live generation needs your free Gemini API key. Add it in <button class="linklike" id="keyNoticeSettings" type="button">Settings</button> — it stays in this browser only.</p>
+
+    <h3 class="subhead">Examples — no key needed</h3>
+    <p class="fine">Each example loads a sketch and its saved layout. The layout is the saved result for that sketch, not a live generation.</p>
+    <div id="exampleList" class="example-list"></div>
+  </section>
+
+  <!-- Centre: preview -->
+  <section class="panel preview-panel" aria-label="Preview">
+    <div class="panel-head">
+      <h2>2 · See it</h2>
+      <div class="preview-tools">
+        <div class="seg" role="group" aria-label="Preview size">
+          <button id="viewDesktop" class="seg-btn active" type="button" aria-pressed="true">Desktop</button>
+          <button id="viewPhone" class="seg-btn" type="button" aria-pressed="false">Phone</button>
+        </div>
+        <button id="btnOpenTab" class="btn btn-ghost btn-small" type="button">Open in new tab</button>
+      </div>
+    </div>
+    <div class="preview-frame-wrap">
+      <iframe id="preview" class="preview-frame" title="Generated page preview" sandbox="allow-scripts" srcdoc=""></iframe>
+    </div>
+    <p class="fine">The preview is a real page built from your layout. Buttons and links work; the form is a demo — it sends nothing.</p>
+  </section>
+
+  <!-- Right: blocks -->
+  <section class="panel blocks-panel" aria-label="Blocks">
+    <div class="panel-head">
+      <h2>3 · Fix it by hand</h2>
+    </div>
+    <p class="fine">Every section of the page is a block. Change the words, move blocks around, or add one — the preview updates as you type.</p>
+
+    <div class="theme-row">
+      <span class="theme-label">Page style</span>
+      <div class="swatches" id="accentSwatches" role="group" aria-label="Accent colour"></div>
+      <label class="tool-check"><input id="chkDark" type="checkbox"> Dark page</label>
+    </div>
+
+    <div id="blockList" class="block-list"></div>
+
+    <div class="add-block">
+      <select id="newBlockKind" aria-label="New block type">
+        <option value="hero">Hero</option>
+        <option value="cards">Cards</option>
+        <option value="text">Text</option>
+        <option value="form">Form</option>
+        <option value="image">Image placeholder</option>
+        <option value="footer">Footer</option>
+      </select>
+      <button id="btnAddBlock" class="btn btn-ghost" type="button">Add block</button>
+    </div>
+
+    <h3 class="subhead">Re-prompt</h3>
+    <label class="fine" for="repromptInput">Describe a change, in plain words. Needs your API key.</label>
+    <textarea id="repromptInput" rows="2" placeholder="e.g. make it dark, bigger headline"></textarea>
+    <button id="btnReprompt" class="btn btn-primary" type="button">Apply change</button>
+    <p id="repromptStatus" class="status" role="status"></p>
+
+    <h3 class="subhead">About this page</h3>
+    <dl class="meta-list">
+      <dt>Source</dt><dd id="metaSource">Hand-built</dd>
+      <dt>Model</dt><dd id="metaModel">—</dd>
+      <dt>Last change</dt><dd id="metaUpdated">—</dd>
+    </dl>
+  </section>
+</main>
+
+<!-- Settings dialog -->
+<dialog id="settingsDialog" class="dialog">
+  <form method="dialog" class="dialog-body">
+    <h2>Settings</h2>
+    <p class="fine">Your API key is stored in this browser's local storage only. It is sent to Google's Gemini API when you generate or re-prompt, and nowhere else.</p>
+    <label class="field-label" for="apiKey">Gemini API key</label>
+    <div class="key-row">
+      <input id="apiKey" type="password" autocomplete="off" placeholder="AIza…" spellcheck="false">
+      <button id="btnToggleKey" class="btn btn-ghost" type="button">Show</button>
+    </div>
+    <p class="fine">Free key: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio → Get API key</a>. The free tier is enough for this app.</p>
+    <label class="field-label" for="modelSelect">Model</label>
+    <select id="modelSelect">
+      <option value="gemini-3.8-flash">gemini-3.8-flash (default, stable)</option>
+      <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+      <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+    </select>
+    <div class="dialog-actions">
+      <button id="btnTestKey" class="btn btn-ghost" type="button">Test connection</button>
+      <button id="btnClearKey" class="btn btn-ghost" type="button">Clear key</button>
+      <button id="btnSaveSettings" class="btn btn-primary" type="button">Done</button>
+    </div>
+    <p id="testResult" class="status" role="status"></p>
+  </form>
+</dialog>
+
+<!-- Export dialog -->
+<dialog id="exportDialog" class="dialog">
+  <form method="dialog" class="dialog-body">
+    <h2>Export your page</h2>
+    <p class="fine">The exported page is one self-contained file — it opens from disk with no network. The zip adds a short README.</p>
+    <div class="dialog-actions dialog-actions-col">
+      <button id="btnCopyHtml" class="btn btn-primary" type="button">Copy HTML</button>
+      <button id="btnDownloadHtml" class="btn btn-ghost" type="button">Download .html</button>
+      <button id="btnDownloadZip" class="btn btn-ghost" type="button">Download .zip</button>
+    </div>
+    <p id="exportStatus" class="status" role="status"></p>
+    <div class="dialog-actions"><button class="btn btn-ghost" type="submit">Close</button></div>
+  </form>
+</dialog>
+
+<!-- Projects dialog -->
+<dialog id="projectsDialog" class="dialog">
+  <form method="dialog" class="dialog-body">
+    <h2>Projects</h2>
+    <p class="fine">Saved in this browser only. Nothing is uploaded.</p>
+    <div id="projectList" class="project-list"></div>
+    <div class="dialog-actions">
+      <button id="btnNewProject" class="btn btn-ghost" type="button">New blank project</button>
+      <button id="btnImportProject" class="btn btn-ghost" type="button">Import JSON…</button>
+      <input id="fileImport" type="file" accept="application/json,.json" hidden>
+      <button class="btn btn-primary" type="submit">Close</button>
+    </div>
+    <p id="projectStatus" class="status" role="status"></p>
+  </form>
+</dialog>
+
+<script src="lib/layout.js"></script>
+<script src="lib/zip.js"></script>
+<script src="lib/gemini.js"></script>
+<script src="lib/examples.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
