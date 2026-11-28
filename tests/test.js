@@ -238,3 +238,48 @@ test('example layouts are distinct from each other', () => {
   const titles = examples.EXAMPLES.map(e => e.layout.title);
   assert.equal(new Set(titles).size, 3);
 });
+
+
+test('layoutToHtml: header links land on real sections, never on missing ids', () => {
+  const html = layout.layoutToHtml({
+    version: 1, title: 'T', theme: { dark: false, accent: '#166534' },
+    sections: [
+      { id: 'h', kind: 'header', brand: 'B', links: ['Home', 'About', 'Extra', 'More', 'Last'] },
+      { id: 'a', kind: 'hero', heading: 'Hi', text: 't', cta: 'Go' },
+      { id: 'b', kind: 'text', heading: 'About', text: 'x' },
+      { id: 'c', kind: 'footer', text: 'bye' }
+    ]
+  });
+  const ids = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
+  for (const m of html.matchAll(/href="#([^"]+)"/g)) {
+    assert.ok(ids.has(m[1]), 'link #' + m[1] + ' has no target in the page');
+  }
+});
+
+test('layoutToHtml: hero CTA is a link only when a form exists', () => {
+  const withForm = layout.layoutToHtml({
+    version: 1, title: 'T', theme: { dark: false, accent: '#166534' },
+    sections: [
+      { id: 'a', kind: 'hero', heading: 'Hi', cta: 'Join' },
+      { id: 'b', kind: 'form', heading: 'Sign up', button: 'Go' }
+    ]
+  });
+  assert.match(withForm, /<a class="pg-cta" href="#pg-form">Join<\/a>/);
+  const noForm = layout.layoutToHtml({
+    version: 1, title: 'T', theme: { dark: false, accent: '#166534' },
+    sections: [{ id: 'a', kind: 'hero', heading: 'Hi', cta: 'Join' }]
+  });
+  assert.ok(!noForm.includes('href="#pg-form"'), 'CTA must not point at a form that is not there');
+  assert.match(noForm, /<span class="pg-cta">Join<\/span>/);
+});
+
+test('layoutToHtml: two forms give the CTA id to the first one only', () => {
+  const html = layout.layoutToHtml({
+    version: 1, title: 'T', theme: { dark: false, accent: '#166534' },
+    sections: [
+      { id: 'a', kind: 'form', heading: 'One', button: 'Go' },
+      { id: 'b', kind: 'form', heading: 'Two', button: 'Go' }
+    ]
+  });
+  assert.equal((html.match(/id="pg-form"/g) || []).length, 1);
+});
